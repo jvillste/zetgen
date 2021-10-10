@@ -561,9 +561,10 @@ other paragraph")))
   [markup]
   (hiccup/html [:html [:body (tree-to-hiccup (parse markup))]]))
 
-(defn html-document [& body]
+(defn html-document [title & body]
   [:html
    [:head
+    [:title title]
     [:meta {:name "viewport"
             :content "width=device-width, initial-scale=1.0"}]
     [:meta {:http-equiv "Content-Type"
@@ -623,7 +624,8 @@ other paragraph")))
         page-name (source-file-name-to-page-name source-file-name)]
     (println source-file-name)
     (spit (str target-directory-path "/" (page-name-to-html-file-name page-name))
-          (hiccup/html (html-document [:a {:href "index.html"} "index"]
+          (hiccup/html (html-document page-name
+                                      [:a {:href "index.html"} "index"]
                                       [:h1 page-name]
                                       [:hr]
                                       (tree-to-hiccup (:parse source-file))
@@ -723,7 +725,8 @@ other paragraph")))
           source-files)
 
     (spit (str target-directory-path "/index.html")
-          (hiccup/html (html-document [:ul (->> (fs/find-files target-directory-path #".*\.html")
+          (hiccup/html (html-document "Zettelkasten"
+                                      [:ul (->> (fs/find-files target-directory-path #".*\.html")
                                                 (map #(.getName %))
                                                 (remove #{"index.html"})
                                                 (sort)
