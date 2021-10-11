@@ -472,7 +472,9 @@ other paragraph")))
 
 (defn transform-external-link
   [text url]
-  [:a {:href url} text])
+  [:span [:a {:href url} text]
+   " ⬀"])
+
 
 ;; [:image alt path]
 ;; [:image alt path title]
@@ -544,14 +546,6 @@ other paragraph")))
    [:body {:style "display: flex; justify-content: center;"}
     (into [:div {:style "max-width: 400px; margin-left: 10px"}]
           body)]])
-
-(defn link-list [file-names]
-  [:ul (map #(do [:li [:a {:href (url-encode %)}
-                       (-> %
-                           (string/replace ".html" "")
-                           (string/replace "-" " "))]])
-            file-names)])
-
 
 (defn source-file-name-to-page-name [source-file-name]
   (-> source-file-name
