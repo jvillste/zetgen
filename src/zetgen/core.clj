@@ -7,9 +7,10 @@
             [clojure.java.io :as io]
             [me.raynes.fs :as fs]
             [instaparse.failure :as failure]
-            [clojure.java.shell :as shell])
+            [clojure.java.shell :as shell]
+            [clj-jgit.porcelain :as porcelain]
+            [java-time :as java-time])
   (:import java.net.URLEncoder))
-
 
 ;; originally from https://github.com/danneu/klobbdown/blob/master/src/klobbdown/parse.clj
 
@@ -256,35 +257,6 @@
                                    "   2)"
                                    "~~~"]))))
 
-
-#_(defn partition-by-boundaries [boundary-types parsed-lines]
-    (partition-by (let [open-boundary-type (atom nil)]
-                    (fn [parsed-line]
-                      (let [line-type (first (:parse parsed-line))]
-                        (prn 'line-type line-type) ;; TODO: remove-me
-                        (prn 'open-boundary-type @open-boundary-type) ;; TODO: remove-me
-
-
-                        (if (some? @open-boundary-type)
-                          (if (= @open-boundary-type line-type)
-                            (do (reset! open-boundary-type nil)
-                                line-type)
-                            @open-boundary-type)
-                          (if (contains? (set boundary-types)
-                                         line-type)
-                            (do (reset! open-boundary-type line-type)
-                                line-type)
-                            line-type)))))
-                  parsed-lines))
-
-#_(deftest test-partition-by-boundaries
-    (is (= nil
-           (partition-by-boundaries [:code-boundary]
-                                    [{:parse [:paragraph]}
-                                     {:parse [:code-boundary]}
-                                     {:parse [:paragraph]}
-                                     {:parse [:code-boundary]}
-                                     {:parse [:paragraph]}]))))
 
 (defn boundary-type [line]
   (when (re-matches #"((~~~)|(```)).*"
@@ -543,7 +515,7 @@ other paragraph")))
   (let [transformations {;; :anchor transform-anchor
                          :emphasis transform-emphasis
                          :strong transform-strong
-                                        ; :image transform-image
+                         ;; :image transform-image
                          :code-block transform-code-block
                          :inline-code transform-inline-code
                          :unordered-item transform-unordered-item
@@ -710,13 +682,34 @@ other paragraph")))
        (links-between-files)
        (into-multimap #{})))
 
+(defn instant-to-local-zoned-date-time [instant]
+  (java-time/zoned-date-time instant
+                             (java-time/zone-id)))
+
+(defn last-commit-date-time [repo path]
+  (let [commit (first (porcelain/git-log repo
+                                         :max-count 1
+                                         :paths [path]))]
+    (when commit
+      (-> commit
+          :author
+          :date
+          (instant-to-local-zoned-date-time)))))
+
+(defn source-files [path]
+  (with-open [repo (porcelain/load-repo path)]
+    (doall (map (fn [file-path]
+                  (let [name (-> file-path
+                                 io/file
+                                 .getName)]
+                    {:name name
+                     :parse (parse (slurp file-path))
+                     :last-commit-date-time (last-commit-date-time repo name)}))
+                (fs/find-files path #".*\.md")))))
+
+
 (defn markup-files-to-html [source-directory-path target-directory-path]
-  (let [source-files (map (fn [file-path]
-                            {:name (-> file-path
-                                       io/file
-                                       .getName)
-                             :parse (parse (slurp file-path))})
-                          (fs/find-files source-directory-path #".*\.md"))]
+  (let [source-files (source-files source-directory-path)]
 
     (run! (partial markup-file-to-html
                    target-directory-path
@@ -726,14 +719,17 @@ other paragraph")))
 
     (spit (str target-directory-path "/index.html")
           (hiccup/html (html-document "Zettelkasten"
-                                      [:ul (->> (fs/find-files target-directory-path #".*\.html")
-                                                (map #(.getName %))
-                                                (remove #{"index.html"})
-                                                (sort)
-                                                (map #(do [:li [:a {:href (url-encode %)}
-                                                                (-> %
-                                                                    (string/replace ".html" "")
-                                                                    (string/replace "-" " "))]])))])))))
+                                      [:ul (->> source-files
+                                                (sort-by :last-commit-date-time)
+                                                (reverse)
+                                                (map #(let [page-name (source-file-name-to-page-name (:name %))]
+                                                        [:li [:a {:href (url-encode (page-name-to-html-file-name page-name))}
+                                                              page-name
+                                                              ;; " "
+                                                              ;; (when (:last-commit-date-time %)
+                                                              ;;   (java-time/format (java-time/formatter :iso-local-date)
+                                                              ;;                     (:last-commit-date-time %)))
+                                                              ]])))])))))
 
 
 (def commands [#'markup-files-to-html])
@@ -762,3 +758,8 @@ other paragraph")))
                                     (:doc (meta command-var)))))
                         (interpose "------------------------\n")
                         (apply str)))))))
+
+(comment
+  (markup-files-to-html "/Users/jukka/Library/Mobile Documents/iCloud~md~obsidian/Documents/zettelkasten"
+                        "/Users/jukka/Downloads/zettelkasten")
+  ) ;; TODO: remove-me
