@@ -723,7 +723,11 @@ other paragraph")))
                                                               ;; (when (:last-commit-date-time %)
                                                               ;;   (java-time/format (java-time/formatter :iso-local-date)
                                                               ;;                     (:last-commit-date-time %)))
-                                                              ]])))])))))
+                                                              ]])))])))
+
+    ;; from https://techexpert.tips/apache/apache-disable-cache/
+    (spit (str target-directory-path "/.htaccess")
+          "Header set Cache-Control \"max-age=20\"\n")))
 
 
 (def commands [#'markup-files-to-html])
