@@ -621,7 +621,9 @@ other paragraph")))
 
 (defn links-in-item [item]
   (cond (and (sequential? item)
-             (= :link (first item)))
+             (contains? #{:link
+                          :link-with-label}
+                        (first item)))
         [(second item)]
 
         (sequential? item)
