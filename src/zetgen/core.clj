@@ -27,6 +27,7 @@
     paragraph = (inline-code |
                  strong |
                  emphasis |
+                 link-with-label |
                  link |
                  external-link |
                  paragraph-text)+
@@ -35,7 +36,9 @@
     strong = <'**'> #'((?!\\*\\*).)*' <'**'>
     emphasis =  <'*'> #'[^\\*]+' <'*'>
     inline-code = <'`'> #'[^`]+' <'`'>
-    link = <'[['> #'[^\\]]+' <']]'>
+    link = <'[['> #'[^\\]\\|]+' <']]'>
+    link-with-label = <'[['> #'[^\\]\\|]+' <'|'> #'[^\\]\\|]+' <']]'>
+
     external-link = <'['> #'[^\\]]+' <']'> <'('> #'[^\\)]+' <')'>
 
     "))
@@ -60,6 +63,12 @@
 
   (is (= [:heading "#" [:paragraph "heading"]]
          (:parse (parse-line "# heading"))))
+
+  (is (= [:paragraph [:link "link"]]
+         (:parse (parse-line "[[link]]"))))
+
+  (is (= [:paragraph [:link-with-label "link" "label"]]
+         (:parse (parse-line "[[link|label]]"))))
 
   (is (some? (:error (parse-line "[")))))
 
@@ -465,10 +474,16 @@ other paragraph")))
   [:code text])
 
 (defn transform-link
-  [text]
-  [:a {:href (url-encode (str (string/replace text
+  [page-name]
+  [:a {:href (url-encode (str (string/replace page-name
                                               " " "-") ".html"))}
-   text])
+   page-name])
+
+(defn transform-link-with-label
+  [page-name label]
+  [:a {:href (url-encode (str (string/replace page-name
+                                              " " "-") ".html"))}
+   label])
 
 (defn transform-external-link
   [text url]
@@ -527,6 +542,7 @@ other paragraph")))
                          :heading transform-heading
                          :paragraph transform-paragraph
                          :link transform-link
+                         :link-with-label transform-link-with-label
                          :external-link transform-external-link}]
     (instaparse/transform transformations tree)))
 
