@@ -1,6 +1,7 @@
 (ns zetgen.core
   (:gen-class)
   (:require [instaparse.core :as instaparse]
+            [clojure.edn :as edn]
             [hiccup.core :as hiccup]
             [clojure.string :as string]
             [clojure.test :refer [deftest is]]
@@ -606,12 +607,12 @@ other paragraph")))
 
 (def zetgen-attribution [:p "This site is generated with " [:a {:href "https://github.com/jvillste/zetgen" } "zetgen"]])
 
-(defn markup-file-to-html [target-directory-path raw-header back-link-index forward-link-index source-file]
+(defn markup-file-to-html [target-directory-path raw-header title-postfix back-link-index forward-link-index source-file]
   (let [source-file-name (:name source-file)
         page-name (source-file-name-to-page-name source-file-name)]
     (println source-file-name)
     (spit (str target-directory-path "/" (page-name-to-html-file-name page-name))
-          (hiccup/html (html-document page-name
+          (hiccup/html (html-document (str page-name title-postfix)
                                       raw-header
                                       [:a {:href "index.html"} "index"]
                                       [:h1 page-name]
@@ -726,21 +727,27 @@ other paragraph")))
                      :last-commit-date-time (last-commit-date-time repo name)}))
                 (fs/find-files path #".*\.md")))))
 
+(defn slurp-if-exists [path]
+  (when (.exists (io/file path))
+    (slurp path)))
 
 (defn markup-files-to-html [source-directory-path target-directory-path]
-  (let [source-files (source-files source-directory-path)]
-
+  (let [source-files (source-files source-directory-path)
+        metadata (when-let [metadata-edn (slurp-if-exists (str source-directory-path "/metadata.edn"))]
+                   (edn/read-string metadata-edn))]
     (run! (partial markup-file-to-html
                    target-directory-path
-                   (let [head-file-path (str source-directory-path "/head.html")]
-                     (when (.exists (io/file head-file-path))
-                       (slurp head-file-path)))
+                   (slurp-if-exists (str source-directory-path "/head.html"))
+                   (when-let [title (:title metadata)]
+                     (str " - " title))
                    (back-link-index source-files)
                    (forward-link-index source-files))
           source-files)
 
     (spit (str target-directory-path "/index.html")
-          (hiccup/html (html-document "Zettelkasten"
+          (hiccup/html (html-document (or (:title metadata)
+                                          "Zettelkasten")
+                                      (slurp-if-exists (str source-directory-path "/head.html"))
                                       [:div
                                        [:ul (->> source-files
                                                  (sort-by :last-commit-date-time)
@@ -788,6 +795,7 @@ other paragraph")))
                         (apply str)))))))
 
 (comment
+
   (markup-files-to-html "/Users/jukka/Library/Mobile Documents/iCloud~md~obsidian/Documents/zettelkasten"
                         "/Users/jukka/Downloads/zettelkasten")
 
