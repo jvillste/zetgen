@@ -551,10 +551,13 @@ other paragraph")))
   [markup]
   (hiccup/html [:html [:body (tree-to-hiccup (parse markup))]]))
 
-(defn html-document [title & body]
+
+
+(defn html-document [title raw-header & body]
   [:html
    [:head
     [:title title]
+    raw-header
     [:meta {:name "viewport"
             :content "width=device-width, initial-scale=1.0"}]
     [:meta {:http-equiv "Content-Type"
@@ -601,12 +604,13 @@ other paragraph")))
                               (get back-link-index
                                    root-page-name))))))))
 
-(defn markup-file-to-html [target-directory-path back-link-index forward-link-index source-file]
+(defn markup-file-to-html [target-directory-path raw-header back-link-index forward-link-index source-file]
   (let [source-file-name (:name source-file)
         page-name (source-file-name-to-page-name source-file-name)]
     (println source-file-name)
     (spit (str target-directory-path "/" (page-name-to-html-file-name page-name))
           (hiccup/html (html-document page-name
+                                      raw-header
                                       [:a {:href "index.html"} "index"]
                                       [:h1 page-name]
                                       [:hr]
@@ -725,6 +729,9 @@ other paragraph")))
 
     (run! (partial markup-file-to-html
                    target-directory-path
+                   (let [head-file-path (str source-directory-path "/head.html")]
+                     (when (.exists (io/file head-file-path))
+                       (slurp head-file-path)))
                    (back-link-index source-files)
                    (forward-link-index source-files))
           source-files)
@@ -778,4 +785,5 @@ other paragraph")))
 (comment
   (markup-files-to-html "/Users/jukka/Library/Mobile Documents/iCloud~md~obsidian/Documents/zettelkasten"
                         "/Users/jukka/Downloads/zettelkasten")
+
   ) ;; TODO: remove-me
