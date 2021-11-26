@@ -604,6 +604,8 @@ other paragraph")))
                               (get back-link-index
                                    root-page-name))))))))
 
+(def zetgen-attribution [:p "This site is generated with " [:a {:href "https://github.com/jvillste/zetgen" } "zetgen"]])
+
 (defn markup-file-to-html [target-directory-path raw-header back-link-index forward-link-index source-file]
   (let [source-file-name (:name source-file)
         page-name (source-file-name-to-page-name source-file-name)]
@@ -621,7 +623,8 @@ other paragraph")))
                                              0
                                              2
                                              [page-name]
-                                             page-name))))))
+                                             page-name)
+                                      zetgen-attribution)))))
 
 (defn links-in-item [item]
   (cond (and (sequential? item)
@@ -738,17 +741,19 @@ other paragraph")))
 
     (spit (str target-directory-path "/index.html")
           (hiccup/html (html-document "Zettelkasten"
-                                      [:ul (->> source-files
-                                                (sort-by :last-commit-date-time)
-                                                (reverse)
-                                                (map #(let [page-name (source-file-name-to-page-name (:name %))]
-                                                        [:li [:a {:href (url-encode (page-name-to-html-file-name page-name))}
-                                                              page-name
-                                                              ;; " "
-                                                              ;; (when (:last-commit-date-time %)
-                                                              ;;   (java-time/format (java-time/formatter :iso-local-date)
-                                                              ;;                     (:last-commit-date-time %)))
-                                                              ]])))])))
+                                      [:div
+                                       [:ul (->> source-files
+                                                 (sort-by :last-commit-date-time)
+                                                 (reverse)
+                                                 (map #(let [page-name (source-file-name-to-page-name (:name %))]
+                                                         [:li [:a {:href (url-encode (page-name-to-html-file-name page-name))}
+                                                               page-name
+                                                               ;; " "
+                                                               ;; (when (:last-commit-date-time %)
+                                                               ;;   (java-time/format (java-time/formatter :iso-local-date)
+                                                               ;;                     (:last-commit-date-time %)))
+                                                               ]])))]
+                                       zetgen-attribution])))
 
     ;; from https://techexpert.tips/apache/apache-disable-cache/
     (spit (str target-directory-path "/.htaccess")
