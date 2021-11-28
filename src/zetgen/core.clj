@@ -13,6 +13,9 @@
             [java-time :as java-time])
   (:import java.net.URLEncoder))
 
+(defn format-date [date-time]
+  (java-time/format "YYYY-MM-dd" date-time))
+
 ;; originally from https://github.com/danneu/klobbdown/blob/master/src/klobbdown/parse.clj
 
 (def line-parser
@@ -616,6 +619,8 @@ other paragraph")))
                                       raw-header
                                       [:a {:href "index.html"} "index"]
                                       [:h1 page-name]
+                                      [:p {:style "color:gray"}
+                                       (format-date (:last-commit-date-time source-file))]
                                       [:hr]
                                       (tree-to-hiccup (:parse source-file))
                                       [:hr]
@@ -754,12 +759,9 @@ other paragraph")))
                                                  (reverse)
                                                  (map #(let [page-name (source-file-name-to-page-name (:name %))]
                                                          [:li [:a {:href (url-encode (page-name-to-html-file-name page-name))}
-                                                               page-name
-                                                               ;; " "
-                                                               ;; (when (:last-commit-date-time %)
-                                                               ;;   (java-time/format (java-time/formatter :iso-local-date)
-                                                               ;;                     (:last-commit-date-time %)))
-                                                               ]])))]
+                                                               page-name]
+                                                          [:span {:style "color:gray;font-size:0.8em"}
+                                                           (str " " (format-date (:last-commit-date-time %)))]])))]
                                        zetgen-attribution])))
 
     ;; from https://techexpert.tips/apache/apache-disable-cache/
@@ -794,7 +796,10 @@ other paragraph")))
                         (interpose "------------------------\n")
                         (apply str)))))))
 
+
 (comment
+  (markup-files-to-html "/Users/jukka/google-drive/src/zetgen/temp/testkasten"
+                        "/Users/jukka/google-drive/src/zetgen/temp/testhtml")
 
   (markup-files-to-html "/Users/jukka/Library/Mobile Documents/iCloud~md~obsidian/Documents/zettelkasten"
                         "/Users/jukka/Downloads/zettelkasten")
