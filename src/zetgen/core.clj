@@ -758,7 +758,8 @@ other paragraph")))
                                                  (sort-by :last-commit-date-time)
                                                  (reverse)
                                                  (map #(let [page-name (source-file-name-to-page-name (:name %))]
-                                                         [:li [:a {:href (url-encode (page-name-to-html-file-name page-name))}
+                                                         [:li {:style "white-space:nowrap"}
+                                                          [:a {:href (url-encode (page-name-to-html-file-name page-name))}
                                                                page-name]
                                                           [:span {:style "color:gray;font-size:0.8em"}
                                                            (str " " (format-date (:last-commit-date-time %)))]])))]
