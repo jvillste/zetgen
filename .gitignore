@@ -13,3 +13,4 @@ pom.xml.asc
 .hg/
 /publish.sh
 temp
+.DS_Store
