@@ -615,7 +615,7 @@ other paragraph")))
         page-name (source-file-name-to-page-name source-file-name)]
     (println source-file-name)
     (spit (str target-directory-path "/" (page-name-to-html-file-name page-name))
-          (hiccup/html (html-document (str page-name title-postfix)
+          (hiccup/html (html-document (str (string/capitalize page-name) title-postfix)
                                       raw-header
                                       [:a {:href "index.html"} "index"]
                                       [:h1 (string/capitalize page-name)]
