@@ -618,9 +618,10 @@ other paragraph")))
           (hiccup/html (html-document (str page-name title-postfix)
                                       raw-header
                                       [:a {:href "index.html"} "index"]
-                                      [:h1 page-name]
-                                      [:p {:style "color:gray"}
-                                       (format-date (:last-commit-date-time source-file))]
+                                      [:h1 (string/capitalize page-name)]
+                                      (when-let [last-commit-date-time (:last-commit-date-time source-file)]
+                                        [:p {:style "color:gray"}
+                                         (format-date last-commit-date-time)])
                                       [:hr]
                                       (tree-to-hiccup (:parse source-file))
                                       [:hr]
@@ -673,9 +674,9 @@ other paragraph")))
 
 (defn links-between-files [files]
   (mapcat (fn [source-file]
-            (for [target-file (links-in-parse (:parse source-file))]
+            (for [target-page-name (links-in-parse (:parse source-file))]
               [(source-file-name-to-page-name (:name source-file))
-               target-file]))
+               target-page-name]))
           files))
 
 (deftest test-links-between-files
@@ -760,9 +761,10 @@ other paragraph")))
                                                  (map #(let [page-name (source-file-name-to-page-name (:name %))]
                                                          [:li {:style "white-space:nowrap"}
                                                           [:a {:href (url-encode (page-name-to-html-file-name page-name))}
-                                                               page-name]
-                                                          [:span {:style "color:gray;font-size:0.8em"}
-                                                           (str " " (format-date (:last-commit-date-time %)))]])))]
+                                                           (string/capitalize page-name)]
+                                                          (when-let [last-commit-date-time (:last-commit-date-time %)]
+                                                            [:span {:style "color:gray;font-size:0.8em"}
+                                                             (str " " (format-date last-commit-date-time))])])))]
                                        zetgen-attribution])))
 
     ;; from https://techexpert.tips/apache/apache-disable-cache/
